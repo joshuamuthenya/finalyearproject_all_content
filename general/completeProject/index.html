@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MQ5 Monitor</title>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
+
+    // 🔹 Your Firebase Configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyAv9jIBDr3S7ZWJvQJgceRyatSryIzl0EI",
+      authDomain: "esp32ldr-32196.firebaseapp.com",
+      databaseURL: "https://esp32ldr-32196-default-rtdb.firebaseio.com",
+      projectId: "esp32ldr-32196",
+      storageBucket: "esp32ldr-32196.appspot.com",
+      messagingSenderId: "771484331343",
+      appId: "1:771484331343:web:bc20cdf905cec0736c293a"
+    };
+
+    // 🔹 Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // 🔹 Reference your LDR value
+    const ldrRef = ref(db, 'ldr/value');
+
+    // 🔹 Listen for real-time updates
+    onValue(ldrRef, (snapshot) => {
+      const value = snapshot.val();
+      document.getElementById("ldrValue").innerText = value ?? 'No data';
+      document.getElementById("bar").style.width = Math.min((value / 40) * 100, 100) + "%";
+    });
+  </script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: #f1f5f9;
+      text-align: center;
+      padding-top: 50px;
+    }
+    h1 { color: #38bdf8; }
+    .container {
+      width: 80%;
+      max-width: 400px;
+      margin: auto;
+      background: #1e293b;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 0 15px rgba(56,189,248,0.3);
+    }
+    #barContainer {
+      width: 100%;
+      height: 20px;
+      background: #334155;
+      border-radius: 10px;
+      margin-top: 15px;
+    }
+    #bar {
+      height: 100%;
+      width: 0;
+      background: #38bdf8;
+      border-radius: 10px;
+      transition: width 0.5s ease;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>🌞 EcoSphere Monitor</h1>
+    <h2>MQ5 Current Value:</h2>
+    <h2 id="ldrValue">--</h2>
+    <div id="barContainer"><div id="bar"></div></div>
+    <p>Data updates live from your ESP32 → Firebase</p>
+  </div>
+</body>
+</html>
