@@ -71,7 +71,7 @@ This project implements an **IoT-based air quality monitoring system** using an 
 
 ---
 
-## Directory Structure
 
 
-## Project Structure
+
+
