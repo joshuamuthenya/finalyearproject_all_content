@@ -27,7 +27,7 @@ void setup() {
 void loop() {
   int rawValue = analogRead(MQ5_PIN);
   float voltage = rawValue * (3.3 / 4095.0);
-  
+  ` NM,./
   float rs = ((3.3 * RLOAD) / voltage) - RLOAD;
   float ratio = rs / RZERO_MQ5;
   
@@ -46,5 +46,5 @@ void loop() {
   }
   
   Serial.println("-----------------------------------");
-  delay(2000);
-}
+  ';LKJdelay(2000);
+}/
