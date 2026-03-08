@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Air Quality Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/10.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.6.0/firebase-database-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Air Quality Dashboard</h1>
+    <div class="aq-level">
+        <h2>Current AQ Level: <span id="aq-level">Loading...</span></h2>
+    </div>
+    <div class="charts">
+        <canvas id="sensorChart"></canvas>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

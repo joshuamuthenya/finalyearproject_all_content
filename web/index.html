@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EcoSphere Air Quality Dashboard</title>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-messaging-compat.js"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #030712;
+      color: #e2e8f0;
+      min-height: 100vh;
+    }
+
+    /* ========== AUTH STYLES ========== */
+    .auth-container {
+      width: 100%;
+      max-width: 440px;
+      margin: 100px auto;
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 36px;
+      padding: 2.2rem 2rem;
+      box-shadow: 0 30px 60px -15px #000000cc;
+    }
+
+    .auth-tabs {
+      display: flex;
+      margin-bottom: 2.2rem;
+      border-bottom: 1px solid #1e293b;
+      gap: 0.8rem;
+    }
+
+    .auth-tab {
+      flex: 1;
+      padding: 0.8rem 0.5rem;
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-weight: 500;
+      font-size: 1.1rem;
+      cursor: pointer;
+      border-radius: 18px 18px 0 0;
+      transition: all 0.3s;
+    }
+
+    .auth-tab:hover {
+      color: #38bdf8;
+    }
+
+    .auth-tab.active {
+      color: #38bdf8;
+      border-bottom: 3px solid #38bdf8;
+    }
+
+    .auth-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1.3rem;
+    }
+
+    .auth-form.hidden { 
+      display: none; 
+    }
+
+    .password-wrapper {
+      position: relative;
+      width: 100%;
+    }
+
+    .password-wrapper input {
+      width: 100%;
+      padding-right: 3rem;
+    }
+
+    .toggle-password {
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #94a3b8;
+      cursor: pointer;
+      font-size: 1.3rem;
+      background: transparent;
+      border: none;
+    }
+
+    .auth-input {
+      padding: 1rem 1.2rem;
+      background: #1e293b;
+      border: 1.5px solid #334155;
+      border-radius: 28px;
+      color: #f1f5f9;
+      font-size: 1rem;
+      width: 100%;
+      transition: all 0.3s;
+    }
+
+    .auth-input:focus {
+      outline: none;
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 4px #38bdf840;
+    }
+
+    .auth-button {
+      padding: 1rem;
+      background: linear-gradient(145deg, #38bdf8, #0284c7);
+      border: none;
+      border-radius: 40px;
+      color: #0f172a;
+      font-weight: 700;
+      font-size: 1.1rem;
+      cursor: pointer;
+      margin-top: 0.5rem;
+      transition: all 0.3s;
+    }
+
+    .auth-button:hover {
+      transform: scale(1.02);
+      background: linear-gradient(145deg, #7dd3fc, #38bdf8);
+    }
+
+    .auth-error {
+      color: #f87171;
+      font-size: 0.9rem;
+      text-align: center;
+    }
+
+    /* ========== NOTIFICATION PERMISSION BANNER ========== */
+    .notification-banner {
+      background: #1e293b;
+      border: 1px solid #38bdf8;
+      border-radius: 20px;
+      padding: 1rem 2rem;
+      margin-bottom: 1.5rem;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .notification-banner.show {
+      display: flex;
+    }
+
+    .notification-banner button {
+      background: #38bdf8;
+      border: none;
+      border-radius: 30px;
+      padding: 0.5rem 1.5rem;
+      color: #0f172a;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .notification-banner button:hover {
+      background: #7dd3fc;
+    }
+
+    /* ========== DASHBOARD ========== */
+    #dashboardContainer {
+      width: 100%;
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 1rem;
+    }
+
+    .hidden { 
+      display: none !important; 
+    }
+
+    header {
+      background: #0f172a;
+      padding: 1.2rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #1e293b;
+      border-radius: 60px;
+      margin-bottom: 1.5rem;
+    }
+
+    header h1 {
+      font-size: 1.8rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, #b0e0ff, #7dd3fc, #38bdf8);
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    #userEmail {
+      color: #cbd5e1;
+      background: #1e293b;
+      padding: 0.6rem 1.4rem;
+      border-radius: 40px;
+      font-size: 0.9rem;
+    }
+
+    .logout-btn {
+      padding: 0.6rem 1.8rem;
+      background: #b91c1c;
+      border: none;
+      border-radius: 40px;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .logout-btn:hover {
+      background: #dc2626;
+      transform: scale(1.02);
+    }
+
+    /* ========== ALERT BANNER ========== */
+    .alert-banner {
+      background: #450a0a;
+      border: 2px solid #dc2626;
+      border-radius: 20px;
+      padding: 1rem 2rem;
+      margin-bottom: 1.5rem;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 1; background: #450a0a; }
+      50% { opacity: 0.9; background: #7f1d1d; }
+      100% { opacity: 1; background: #450a0a; }
+    }
+
+    .alert-banner.active { 
+      display: flex; 
+    }
+
+    .alert-icon { 
+      font-size: 2rem; 
+      color: #f87171; 
+      margin-right: 1rem; 
+    }
+    
+    .alert-content { 
+      flex: 1; 
+    }
+    
+    .alert-title { 
+      font-size: 1.3rem; 
+      font-weight: 700; 
+      color: #fecaca; 
+    }
+    
+    .alert-message { 
+      color: #fca5a5; 
+    }
+
+    .alert-close {
+      background: #dc2626;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s;
+    }
+
+    .alert-close:hover {
+      background: #b91c1c;
+      transform: scale(1.1);
+    }
+
+    /* ========== MAIN LAYOUT ========== */
+    .main-layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    @media (max-width: 768px) {
+      .main-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* LEFT PANEL - SENSORS */
+    .sensors-panel {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 32px;
+      padding: 1.5rem;
+    }
+
+    .sensors-panel h2 {
+      color: #94a3b8;
+      font-size: 1.3rem;
+      margin-bottom: 1.5rem;
+      border-left: 4px solid #38bdf8;
+      padding-left: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .sensor-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+    }
+
+    .sensor-item {
+      background: #1a2639;
+      border-radius: 20px;
+      padding: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.3s;
+      border: 2px solid transparent;
+    }
+
+    .sensor-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px -10px #00000080;
+    }
+
+    .sensor-item.alert {
+      background: #450a0a;
+      border: 2px solid #dc2626;
+      animation: alertPulse 1s infinite;
+    }
+
+    @keyframes alertPulse {
+      0% { border-color: #dc2626; }
+      50% { border-color: #f87171; }
+      100% { border-color: #dc2626; }
+    }
+
+    .sensor-info {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+    }
+
+    .sensor-icon {
+      width: 40px;
+      height: 40px;
+      background: #1e2f42;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #38bdf8;
+    }
+
+    .sensor-name { 
+      font-weight: 500; 
+    }
+    
+    .sensor-unit { 
+      font-size: 0.8rem; 
+      color: #6b7b8f; 
+      margin-left: 0.2rem;
+    }
+    
+    .sensor-reading { 
+      font-size: 1.3rem; 
+      font-weight: 700; 
+      color: #38bdf8; 
+    }
+    
+    .sensor-reading.alert-value { 
+      color: #f87171; 
+    }
+
+    .sensor-timestamp {
+      margin-top: 1rem;
+      text-align: right;
+      color: #6b7b8f;
+      font-size: 0.9rem;
+    }
+
+    /* RIGHT PANEL - GRAPHS */
+    .graphs-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .graph-card {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 32px;
+      padding: 1.2rem;
+    }
+
+    .graph-card h3 {
+      color: #94a3b8;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+      padding-left: 0.8rem;
+      border-left: 3px solid #38bdf8;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    canvas { 
+      max-height: 180px; 
+      width: 100% !important; 
+    }
+
+    /* ALERTS SECTION */
+    .alerts-section {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 32px;
+      padding: 1.5rem;
+      margin-top: 1.5rem;
+    }
+
+    .alerts-section h3 {
+      color: #94a3b8;
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .alerts-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .alert-item {
+      background: #1a2639;
+      border-left: 4px solid #dc2626;
+      padding: 0.8rem 1rem;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .alert-item.critical { 
+      border-left-color: #7f1d1d; 
+      background: #2d1a1a;
+    }
+    
+    .alert-item.warning { 
+      border-left-color: #fbbf24; 
+    }
+
+    .alert-time {
+      margin-left: auto;
+      font-size: 0.8rem;
+      color: #94a3b8;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 50px;
+      height: 50px;
+      border: 3px solid #1e293b;
+      border-radius: 50%;
+      border-top-color: #38bdf8;
+      animation: spin 1s ease-in-out infinite;
+      margin: 20px auto;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ========== AUTH ========== -->
+<div id="authContainer" class="auth-container">
+  <div class="auth-tabs">
+    <button class="auth-tab active" id="tabLoginBtn" onclick="showLogin()"><i class="fa-solid fa-lock"></i> Log in</button>
+    <button class="auth-tab" id="tabSignupBtn" onclick="showSignup()"><i class="fa-solid fa-user-plus"></i> Sign up</button>
+  </div>
+
+  <!-- Login Form -->
+  <div id="loginForm" class="auth-form">
+    <input type="email" id="loginEmail" class="auth-input" placeholder="your@email.com" required>
+    <div class="password-wrapper">
+      <input type="password" id="loginPassword" class="auth-input" placeholder="Password" required>
+      <i class="fa-regular fa-eye toggle-password" onclick="togglePassword('loginPassword', this)"></i>
+    </div>
+    <button class="auth-button" onclick="handleLogin()"><i class="fa-solid fa-arrow-right-to-bracket"></i> Log in</button>
+    <div id="loginError" class="auth-error"></div>
+  </div>
+
+  <!-- Signup Form -->
+  <div id="signupForm" class="auth-form hidden">
+    <input type="email" id="signupEmail" class="auth-input" placeholder="Email" required>
+    <div class="password-wrapper">
+      <input type="password" id="signupPassword" class="auth-input" placeholder="Password (min 6 chars)" required>
+      <i class="fa-regular fa-eye toggle-password" onclick="togglePassword('signupPassword', this)"></i>
+    </div>
+    <div class="password-wrapper">
+      <input type="password" id="signupConfirmPassword" class="auth-input" placeholder="Confirm password" required>
+      <i class="fa-regular fa-eye toggle-password" onclick="togglePassword('signupConfirmPassword', this)"></i>
+    </div>
+    <button class="auth-button" onclick="handleSignup()"><i class="fa-solid fa-user-check"></i> Create account</button>
+    <div id="signupError" class="auth-error"></div>
+  </div>
+</div>
+
+<!-- ========== DASHBOARD ========== -->
+<div id="dashboardContainer" class="hidden">
+
+  <header>
+    <h1><i class="fa-solid fa-leaf" style="color:#38bdf8;"></i> EcoSphere Air</h1>
+    <div class="user-info">
+      <span id="userEmail"></span>
+      <button class="logout-btn" onclick="handleLogout()"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+    </div>
+  </header>
+
+  <!-- Notification Permission Banner -->
+  <div id="notificationBanner" class="notification-banner">
+    <span><i class="fa-solid fa-bell"></i> Get alerts on this device</span>
+    <button onclick="requestNotificationPermission()">Enable</button>
+  </div>
+
+  <!-- Alert Banner -->
+  <div id="alertBanner" class="alert-banner">
+    <i class="fa-solid fa-circle-exclamation alert-icon"></i>
+    <div class="alert-content">
+      <div class="alert-title" id="alertTitle">⚠️ ACTIVE ALERTS</div>
+      <div class="alert-message" id="alertMessage">Multiple sensors exceeding thresholds</div>
+    </div>
+    <button class="alert-close" onclick="dismissAlert()"><i class="fa-solid fa-times"></i></button>
+  </div>
+
+  <!-- Main Layout -->
+  <div class="main-layout">
+    
+    <!-- LEFT: SENSORS -->
+    <div class="sensors-panel">
+      <h2><i class="fa-solid fa-microchip"></i> Live Sensors</h2>
+      <div id="sensorGrid" class="sensor-grid">
+        <!-- Populated by JavaScript -->
+      </div>
+      <div class="sensor-timestamp">
+        <i class="fa-regular fa-clock"></i> Last update: <span id="lastUpdate">--</span>
+      </div>
+    </div>
+
+    <!-- RIGHT: GRAPHS -->
+    <div class="graphs-panel">
+      <div class="graph-card">
+        <h3><i class="fa-solid fa-temperature-low"></i> Temperature & Humidity</h3>
+        <canvas id="chartTempHum"></canvas>
+      </div>
+      <div class="graph-card">
+        <h3><i class="fa-solid fa-smog"></i> PM2.5 / PM10</h3>
+        <canvas id="chartPM"></canvas>
+      </div>
+      <div class="graph-card">
+        <h3><i class="fa-solid fa-vial"></i> MQ Sensors (ADC)</h3>
+        <canvas id="chartMQ"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Active Alerts Section -->
+  <div class="alerts-section">
+    <h3><i class="fa-solid fa-bell"></i> Active Alerts</h3>
+    <div id="alertsList" class="alerts-list">
+      <div class="alert-item">No active alerts</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ========== THRESHOLDS ==========
+  const THRESHOLDS = {
+    pm25: 1100,
+    pm10: 1100,
+    mq7: 1500,
+    mq2: 1300,
+    mq8: 1000,
+    tempLow: 10,
+    tempHigh: 30
+  };
+
+  // ========== FIREBASE CONFIG ==========
+  const firebaseConfig = {
+    apiKey: "AIzaSyDtRt9ojUqjJX9ItczqH8ZaouFsSCwyhCQ",
+    authDomain: "ecosphere-434df.firebaseapp.com",
+    databaseURL: "https://ecosphere-434df-default-rtdb.firebaseio.com",
+    projectId: "ecosphere-434df",
+    storageBucket: "ecosphere-434df.appspot.com",
+    messagingSenderId: "337466379916",
+    appId: "1:337466379916:web:42541d8d9e5884a8e8f5a9"
+  };
+
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const database = firebase.database();
+  let messaging = null;
+
+  // Initialize messaging only if supported
+  try {
+    messaging = firebase.messaging();
+  } catch (e) {
+    console.log('Messaging not supported in this browser');
+  }
+
+  // ========== GLOBAL VARIABLES ==========
+  let currentUser = null;
+  let sensorListener = null;
+  let activeAlerts = {};
+  let alertShown = {};
+  let chartTempHum, chartPM, chartMQ;
+
+  // ========== PASSWORD TOGGLE ==========
+  window.togglePassword = function(fieldId, icon) {
+    const input = document.getElementById(fieldId);
+    input.type = input.type === 'password' ? 'text' : 'password';
+    icon.classList.toggle('fa-eye');
+    icon.classList.toggle('fa-eye-slash');
+  };
+
+  // ========== AUTH FUNCTIONS ==========
+  window.showLogin = function() {
+    document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('tabLoginBtn').classList.add('active');
+    document.getElementById('loginForm').classList.remove('hidden');
+    document.getElementById('signupForm').classList.add('hidden');
+    clearAuthErrors();
+  };
+
+  window.showSignup = function() {
+    document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('tabSignupBtn').classList.add('active');
+    document.getElementById('signupForm').classList.remove('hidden');
+    document.getElementById('loginForm').classList.add('hidden');
+    clearAuthErrors();
+  };
+
+  function clearAuthErrors() {
+    document.getElementById('loginError').textContent = '';
+    document.getElementById('signupError').textContent = '';
+  }
+
+  window.handleLogin = function() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    
+    if (!email || !password) {
+      document.getElementById('loginError').textContent = 'Please enter email and password';
+      return;
+    }
+    
+    auth.signInWithEmailAndPassword(email, password)
+      .catch(error => {
+        document.getElementById('loginError').textContent = error.message;
+      });
+  };
+
+  window.handleSignup = function() {
+    const email = document.getElementById('signupEmail').value.trim();
+    const pass = document.getElementById('signupPassword').value;
+    const confirm = document.getElementById('signupConfirmPassword').value;
+    
+    if (!email || !pass || !confirm) {
+      document.getElementById('signupError').textContent = 'All fields are required';
+      return;
+    }
+    
+    if (pass !== confirm) {
+      document.getElementById('signupError').textContent = 'Passwords do not match';
+      return;
+    }
+    
+    if (pass.length < 6) {
+      document.getElementById('signupError').textContent = 'Password must be at least 6 characters';
+      return;
+    }
+    
+    auth.createUserWithEmailAndPassword(email, pass)
+      .catch(error => {
+        document.getElementById('signupError').textContent = error.message;
+      });
+  };
+
+  window.handleLogout = function() {
+    if (sensorListener) {
+      database.ref("air_quality/live").off('value', sensorListener);
+    }
+    auth.signOut();
+  };
+
+  // ========== NOTIFICATIONS ==========
+  window.requestNotificationPermission = async function() {
+    if (!messaging) {
+      alert('Notifications not supported in this browser');
+      return;
+    }
+    
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        const token = await messaging.getToken();
+        console.log('Notification token:', token);
+        
+        if (currentUser) {
+          await database.ref(`users/${currentUser.uid}/fcmToken`).set(token);
+        }
+        
+        document.getElementById('notificationBanner').classList.remove('show');
+        showBrowserNotification('✅ Notifications enabled', 'You will receive alerts on this device');
+      }
+    } catch (error) {
+      console.error('Notification permission error:', error);
+    }
+  };
+
+  function showBrowserNotification(title, body, critical = false) {
+    if (!('Notification' in window) || Notification.permission !== 'granted') {
+      return;
+    }
+    
+    try {
+      new Notification(title, {
+        body: body,
+        icon: critical ? '🔴' : '⚠️',
+        vibrate: critical ? [200, 100, 200] : [100, 50, 100],
+        tag: 'air-quality-alert'
+      });
+    } catch (e) {
+      console.log('Notification failed:', e);
+    }
+  }
+
+  // Handle foreground messages
+  if (messaging) {
+    messaging.onMessage((payload) => {
+      console.log('Message received:', payload);
+      showBrowserNotification(
+        payload.notification?.title || 'Air Quality Alert',
+        payload.notification?.body || 'Sensor threshold exceeded'
+      );
+    });
+  }
+
+  // ========== ALERT SYSTEM ==========
+  function checkThresholds(data) {
+    const newAlerts = {};
+    let criticalAlert = false;
+
+    // Check PM2.5
+    if (data.pm25 > THRESHOLDS.pm25) {
+      newAlerts.pm25 = { value: data.pm25, type: 'PM2.5', unit: 'µg/m³' };
+      if (!alertShown.pm25) {
+        showBrowserNotification('⚠️ High PM2.5', `${data.pm25} µg/m³ - Close windows`);
+        alertShown.pm25 = true;
+      }
+    } else { 
+      alertShown.pm25 = false; 
+    }
+
+    // Check PM10
+    if (data.pm10 > THRESHOLDS.pm10) {
+      newAlerts.pm10 = { value: data.pm10, type: 'PM10', unit: 'µg/m³' };
+      if (!alertShown.pm10) {
+        showBrowserNotification('⚠️ High PM10', `${data.pm10} µg/m³ - Air quality degraded`);
+        alertShown.pm10 = true;
+      }
+    } else { 
+      alertShown.pm10 = false; 
+    }
+
+    // Check CO (MQ7)
+    if (data.mq7 > THRESHOLDS.mq7) {
+      newAlerts.mq7 = { value: data.mq7, type: 'CO', unit: 'ADC', critical: true };
+      criticalAlert = true;
+      if (!alertShown.mq7) {
+        showBrowserNotification('☠️ CRITICAL: CO DETECTED', 'Carbon monoxide high - EVACUATE!', true);
+        alertShown.mq7 = true;
+      }
+    } else { 
+      alertShown.mq7 = false; 
+    }
+
+    // Check MQ2 (Combustible Gas)
+    if (data.mq2 > THRESHOLDS.mq2) {
+      newAlerts.mq2 = { value: data.mq2, type: 'Gas', unit: 'ADC' };
+      if (!alertShown.mq2) {
+        showBrowserNotification('🔥 Gas Detected', 'Combustible gas high - ventilate');
+        alertShown.mq2 = true;
+      }
+    } else { 
+      alertShown.mq2 = false; 
+    }
+
+    // Check MQ8 (Hydrogen)
+    if (data.mq8 > THRESHOLDS.mq8) {
+      newAlerts.mq8 = { value: data.mq8, type: 'H2', unit: 'ADC' };
+      if (!alertShown.mq8) {
+        showBrowserNotification('⚡ Hydrogen Detected', 'H2 levels high');
+        alertShown.mq8 = true;
+      }
+    } else { 
+      alertShown.mq8 = false; 
+    }
+
+    // Check Temperature
+    if (data.temp < THRESHOLDS.tempLow || data.temp > THRESHOLDS.tempHigh) {
+      newAlerts.temp = { value: data.temp, type: 'Temperature', unit: '°C' };
+      if (!alertShown.temp) {
+        showBrowserNotification('🌡️ Temperature Alert', `${data.temp}°C - Out of range`);
+        alertShown.temp = true;
+      }
+    } else { 
+      alertShown.temp = false; 
+    }
+
+    activeAlerts = newAlerts;
+    updateAlertUI(activeAlerts, criticalAlert);
+  }
+
+  function updateAlertUI(alerts, critical) {
+    const banner = document.getElementById('alertBanner');
+    const alertTitle = document.getElementById('alertTitle');
+    const alertMessage = document.getElementById('alertMessage');
+    
+    if (Object.keys(alerts).length > 0) {
+      banner.classList.add('active');
+      if (critical) {
+        alertTitle.innerHTML = '☠️ CRITICAL: CARBON MONOXIDE';
+        alertMessage.innerHTML = 'EVACUATE IMMEDIATELY! Ventilate area!';
+      } else {
+        alertTitle.innerHTML = `⚠️ ${Object.keys(alerts).length} Active Alert(s)`;
+        alertMessage.innerHTML = 'Multiple sensors exceeding thresholds';
+      }
+    } else {
+      banner.classList.remove('active');
+    }
+
+    // Update alerts list
+    const alertsList = document.getElementById('alertsList');
+    if (Object.keys(alerts).length === 0) {
+      alertsList.innerHTML = '<div class="alert-item"><i class="fa-regular fa-circle-check" style="color:#22c55e;"></i> No active alerts</div>';
+      return;
+    }
+
+    let html = '';
+    for (let [key, alert] of Object.entries(alerts)) {
+      const criticalClass = alert.critical ? 'critical' : 'warning';
+      const icon = alert.critical ? 'fa-skull-crossbones' : 'fa-circle-exclamation';
+      html += `<div class="alert-item ${criticalClass}">
+        <i class="fa-solid ${icon}"></i>
+        <div><strong>${alert.type}:</strong> ${alert.value}${alert.unit}</div>
+        <div class="alert-time">${new Date().toLocaleTimeString()}</div>
+      </div>`;
+    }
+    alertsList.innerHTML = html;
+  }
+
+  window.dismissAlert = function() {
+    document.getElementById('alertBanner').classList.remove('active');
+  };
+
+  // ========== CHARTS ==========
+  function initCharts() {
+    const ctx1 = document.getElementById('chartTempHum').getContext('2d');
+    const ctx2 = document.getElementById('chartPM').getContext('2d');
+    const ctx3 = document.getElementById('chartMQ').getContext('2d');
+
+    chartTempHum = new Chart(ctx1, {
+      type: 'line',
+      data: { 
+        labels: [], 
+        datasets: [
+          { label: 'Temperature °C', data: [], borderColor: '#38bdf8', backgroundColor: 'transparent', tension: 0.4 },
+          { label: 'Humidity %', data: [], borderColor: '#eab308', backgroundColor: 'transparent', tension: 0.4 }
+        ]
+      },
+      options: { 
+        responsive: true, 
+        maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: '#94a3b8' } } },
+        scales: { y: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } } }
+      }
+    });
+
+    chartPM = new Chart(ctx2, {
+      type: 'line',
+      data: { 
+        labels: [], 
+        datasets: [
+          { label: 'PM2.5 µg/m³', data: [], borderColor: '#22c55e', backgroundColor: 'transparent', tension: 0.4 },
+          { label: 'PM10 µg/m³', data: [], borderColor: '#f97316', backgroundColor: 'transparent', tension: 0.4 }
+        ]
+      },
+      options: { 
+        responsive: true, 
+        maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: '#94a3b8' } } },
+        scales: { y: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } } }
+      }
+    });
+
+    chartMQ = new Chart(ctx3, {
+      type: 'line',
+      data: { 
+        labels: [], 
+        datasets: [
+          { label: 'MQ7 (CO)', data: [], borderColor: '#ef4444', backgroundColor: 'transparent', tension: 0.4 },
+          { label: 'MQ2', data: [], borderColor: '#a855f7', backgroundColor: 'transparent', tension: 0.4 },
+          { label: 'MQ8', data: [], borderColor: '#ec4899', backgroundColor: 'transparent', tension: 0.4 }
+        ]
+      },
+      options: { 
+        responsive: true, 
+        maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: '#94a3b8' } } },
+        scales: { y: { min: 0, max: 4095, grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } } }
+      }
+    });
+  }
+
+  function updateCharts(data) {
+    const time = new Date().toLocaleTimeString();
+    
+    [chartTempHum, chartPM, chartMQ].forEach(chart => {
+      chart.data.labels.push(time);
+      if (chart.data.labels.length > 20) {
+        chart.data.labels.shift();
+        chart.data.datasets.forEach(d => d.data.shift());
+      }
+    });
+
+    chartTempHum.data.datasets[0].data.push(data.temperature || 0);
+    chartTempHum.data.datasets[1].data.push(data.humidity || 0);
+    chartPM.data.datasets[0].data.push(data.pm25 || 0);
+    chartPM.data.datasets[1].data.push(data.pm10 || 0);
+    chartMQ.data.datasets[0].data.push(data.mq7_adc || 0);
+    chartMQ.data.datasets[1].data.push(data.mq2_adc || 0);
+    chartMQ.data.datasets[2].data.push(data.mq8_adc || 0);
+
+    chartTempHum.update();
+    chartPM.update();
+    chartMQ.update();
+  }
+
+  // ========== DASHBOARD INIT ==========
+  function initDashboard() {
+    // Build sensor grid
+    const sensors = [
+      { id: 'temp', icon: 'temperature-high', name: 'Temperature', unit: '°C', field: 'temperature' },
+      { id: 'hum', icon: 'droplet', name: 'Humidity', unit: '%', field: 'humidity' },
+      { id: 'pm25', icon: 'wind', name: 'PM2.5', unit: 'µg/m³', field: 'pm25' },
+      { id: 'pm10', icon: 'industry', name: 'PM10', unit: 'µg/m³', field: 'pm10' },
+      { id: 'mq7', icon: 'flask', name: 'MQ7 (CO)', unit: 'ADC', field: 'mq7_adc' },
+      { id: 'mq2', icon: 'fire', name: 'MQ2', unit: 'ADC', field: 'mq2_adc' },
+      { id: 'mq8', icon: 'gas-pump', name: 'MQ8', unit: 'ADC', field: 'mq8_adc' }
+    ];
+
+    let html = '';
+    sensors.forEach(s => {
+      html += `
+        <div class="sensor-item" id="sensor-${s.id}">
+          <div class="sensor-info">
+            <div class="sensor-icon"><i class="fa-solid fa-${s.icon}"></i></div>
+            <div><span class="sensor-name">${s.name}</span> <span class="sensor-unit">${s.unit}</span></div>
+          </div>
+          <div class="sensor-reading" id="${s.id}">--</div>
+        </div>
+      `;
+    });
+    document.getElementById('sensorGrid').innerHTML = html;
+
+    // Initialize charts
+    initCharts();
+
+    // Listen for live data
+    if (sensorListener) {
+      database.ref("air_quality/live").off('value', sensorListener);
+    }
+    
+    sensorListener = database.ref("air_quality/live").on("value", snapshot => {
+      const data = snapshot.val();
+      if (!data) return;
+
+      // Update sensor displays
+      document.getElementById("temp").innerText = data.temperature?.toFixed(1) ?? '--';
+      document.getElementById("hum").innerText = data.humidity?.toFixed(1) ?? '--';
+      document.getElementById("pm25").innerText = data.pm25?.toFixed(0) ?? '--';
+      document.getElementById("pm10").innerText = data.pm10?.toFixed(0) ?? '--';
+      document.getElementById("mq7").innerText = data.mq7_adc ?? '--';
+      document.getElementById("mq2").innerText = data.mq2_adc ?? '--';
+      document.getElementById("mq8").innerText = data.mq8_adc ?? '--';
+      document.getElementById("lastUpdate").innerText = new Date().toLocaleTimeString();
+
+      // Apply alert styling to sensors
+      sensors.forEach(s => {
+        const element = document.getElementById(`sensor-${s.id}`);
+        const value = data[s.field] || 0;
+        const readingElement = document.getElementById(s.id);
+        
+        if ((s.id === 'temp' && (value < THRESHOLDS.tempLow || value > THRESHOLDS.tempHigh)) ||
+            (s.id === 'pm25' && value > THRESHOLDS.pm25) ||
+            (s.id === 'pm10' && value > THRESHOLDS.pm10) ||
+            (s.id === 'mq7' && value > THRESHOLDS.mq7) ||
+            (s.id === 'mq2' && value > THRESHOLDS.mq2) ||
+            (s.id === 'mq8' && value > THRESHOLDS.mq8)) {
+          element.classList.add('alert');
+          readingElement.classList.add('alert-value');
+        } else {
+          element.classList.remove('alert');
+          readingElement.classList.remove('alert-value');
+        }
+      });
+
+      // Check thresholds
+      checkThresholds({
+        temp: data.temperature,
+        pm25: data.pm25,
+        pm10: data.pm10,
+        mq7: data.mq7_adc,
+        mq2: data.mq2_adc,
+        mq8: data.mq8_adc
+      });
+
+      // Update charts
+      updateCharts(data);
+    });
+  }
+
+  // ========== AUTH STATE ==========
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      currentUser = user;
+      document.getElementById('authContainer').classList.add('hidden');
+      document.getElementById('dashboardContainer').classList.remove('hidden');
+      document.getElementById('userEmail').innerHTML = `<i class="fa-regular fa-envelope"></i> ${user.email}`;
+      
+      // Initialize dashboard
+      initDashboard();
+
+      // Show notification banner if supported
+      if ('Notification' in window && Notification.permission === 'default') {
+        document.getElementById('notificationBanner').classList.add('show');
+      }
+    } else {
+      document.getElementById('authContainer').classList.remove('hidden');
+      document.getElementById('dashboardContainer').classList.add('hidden');
+      showLogin();
+      
+      // Clean up listeners
+      if (sensorListener) {
+        database.ref("air_quality/live").off('value', sensorListener);
+        sensorListener = null;
+      }
+    }
+  });
+</script>
+
+</body>
+</html>
